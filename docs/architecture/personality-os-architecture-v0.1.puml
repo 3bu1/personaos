@@ -1,0 +1,344 @@
+' Project: Personality OS
+' Artifact: Architecture Draft
+' Version: v0.1
+
+@startuml
+skinparam shadowing false
+skinparam wrapWidth 220
+skinparam maxMessageSize 220
+
+title Personality OS Architecture - Component Interaction Sequence
+
+actor User
+
+box "Boot Chain"
+participant "Firmware\n(BIOS/UEFI)" as FW
+participant "Bootloader\n(GRUB/syslinux)" as BL
+participant "Linux Kernel" as K
+participant "Initramfs / Early Userspace" as IR
+end box
+
+box "Core Runtime"
+control "PID1 Init Supervisor" as PID1
+participant "Persona Launcher" as PL
+participant "Personality Shell / TUI" as Shell
+participant "Session Manager" as Session
+participant "Command Router" as Router
+control "Safety Policy Engine" as Safety
+participant "Offline Persona Engine" as Persona
+participant "Local Memory Manager" as Memory
+participant "State Persistence Service" as Persist
+end box
+
+box "Personality Definition"
+participant "Built-in Persona Profile" as Profile
+participant "Behavior Rules" as Rules
+participant "Response Templates" as Templates
+participant "Intent/Command Grammar" as Grammar
+end box
+
+box "System Integration"
+participant "TTY / Console Adapter" as TTY
+participant "System Introspection Adapter" as Introspection
+participant "Filesystem Adapter" as FS
+participant "Process Adapter" as Proc
+participant "Power Control Adapter" as Power
+participant "Logging / Diagnostics" as Logging
+end box
+
+box "Storage"
+participant "Writable State Partition\n/var/lib/personalityos" as StateStore
+participant "Session History" as SessionHistory
+participant "Long-term Memory" as LongTermMemory
+participant "Runtime Settings" as RuntimeSettings
+end box
+
+box "Future Phase 2"
+participant "Kernel Event Hook Layer" as KernelHooks
+participant "Persona-aware Kernel Module" as KernelModule
+participant "Patched Kernel Fork\n(optional path)" as PatchedKernel
+end box
+
+User -> FW : power on
+FW -> BL : transfer boot control
+BL -> BL : parse selected boot mode
+BL -> K : load kernel + initramfs + cmdline
+K -> IR : start early userspace
+IR -> PID1 : hand off control
+PID1 -> Logging : emit boot diagnostics
+
+alt Normal mode
+  PID1 -> PL : launch persona runtime
+else Recovery mode
+  PID1 -> Shell : launch recovery console only
+else Stateless mode or state-store failure
+  PID1 -> PL : launch persona runtime without persistent writes
+end
+
+opt Persona runtime active
+  PL -> Shell : initialize terminal UI
+  PL -> Session : create session lifecycle
+  Shell -> TTY : attach console
+  Shell -> Logging : record shell activity
+  Session -> Router : dispatch user input
+
+  Router -> Safety : validate intent and scope
+  alt Persona conversation
+    Safety --> Router : allowed
+    Router -> Persona : request response
+    Persona -> Profile : load persona identity
+    Persona -> Rules : load behavior rules
+    Persona -> Templates : load response templates
+    Persona -> Grammar : resolve grammar
+    Persona -> Memory : request memory context
+    Memory -> Persist : read/write memory state
+    Persist -> StateStore : persist state
+    StateStore -> SessionHistory : access session history
+    StateStore -> LongTermMemory : access long-term memory
+    StateStore -> RuntimeSettings : access runtime settings
+  else Safe system command
+    Safety --> Router : allowed
+    Router -> Introspection : inspect system state
+    Router -> FS : perform safe filesystem action
+    Router -> Proc : inspect or manage process
+    Router -> Power : request reboot/shutdown
+    Router -> Persist : append session event
+  else Unsafe or unsupported request
+    Safety --> Router : denied
+    Router -> Logging : record denial
+  end
+end
+
+Introspection -> K : inspect kernel state
+FS -> K : access filesystem APIs
+Proc -> K : inspect process table
+Power -> K : request power transition
+Logging -> StateStore : write diagnostics
+
+opt Future phase 2 integration
+  Persona -> KernelHooks : receive kernel event input
+  PID1 -> KernelModule : load optional module
+  KernelModule -> KernelHooks : subscribe to hook layer
+  KernelHooks -> K : observe kernel events
+  PatchedKernel --> K : replace or extend base kernel
+end
+
+note right of Safety
+Bounded command surface:
+- identity/persona dialogue
+- help
+- status
+- safe file navigation
+- reboot/shutdown
+No unrestricted shell by default
+end note
+
+note bottom of Persist
+Normal mode:
+- read/write enabled
+
+Stateless mode:
+- reads optional
+- writes disabled or discarded
+
+Failure behavior:
+- boot continues in degraded stateless mode
+end note
+@enduml
+
+@startuml
+skinparam shadowing false
+title Personality OS - Boot Sequence
+
+actor User
+participant "Firmware" as FW
+participant "Bootloader" as BL
+participant "Linux Kernel" as K
+participant "Initramfs" as IR
+participant "PID1 Init Supervisor" as PID1
+participant "Persona Launcher" as PL
+participant "Persistence Service" as PS
+participant "Personality Shell/TUI" as SH
+participant "Offline Persona Engine" as PE
+
+User -> FW : Power on
+FW -> BL : Load boot entry
+BL -> BL : Parse boot mode\n(normal/recovery/stateless)
+BL -> K : Load kernel + initramfs + cmdline
+K -> IR : Start early userspace
+IR -> PID1 : Hand off control
+
+PID1 -> PS : Probe writable state store
+alt Normal mode and state store healthy
+  PS --> PID1 : persistence available
+  PID1 -> PL : Launch persona runtime
+else Stateless mode or store failure
+  PS --> PID1 : stateless/degraded mode
+  PID1 -> PL : Launch persona runtime\nwithout persistent writes
+else Recovery mode
+  PID1 -> SH : Launch maintenance console
+  SH --> User : Recovery prompt
+end
+
+PL -> SH : Initialize terminal UI
+PL -> PE : Load built-in persona profile
+PE -> PS : Load memory and settings
+PS --> PE : Session history + long-term memory
+PE --> SH : Greeting + ready state
+SH --> User : Personality prompt visible
+@enduml
+
+@startuml
+skinparam shadowing false
+title Personality OS - Runtime Interaction
+
+actor User
+participant "Personality Shell/TUI" as Shell
+participant "Session Manager" as Session
+participant "Command Router" as Router
+participant "Safety Policy Engine" as Safety
+participant "Offline Persona Engine" as Persona
+participant "System Adapters" as Adapters
+participant "Persistence Service" as Persist
+
+User -> Shell : Enter text command / dialogue
+Shell -> Session : Submit input
+Session -> Router : Parse request
+Router -> Safety : Validate intent and scope
+
+alt Persona conversation
+  Safety --> Router : allowed
+  Router -> Persona : Generate response
+  Persona -> Persist : Read/write memory
+  Persist --> Persona : memory state
+  Persona --> Router : response
+  Router --> Session : structured output
+  Session --> Shell : render reply
+else Safe system command
+  Safety --> Router : allowed
+  Router -> Adapters : status/file/process/power action
+  Adapters --> Router : result
+  Router -> Persist : append session event
+  Router --> Session : structured output
+  Session --> Shell : render reply
+else Unsafe or unsupported request
+  Safety --> Router : denied
+  Router --> Session : refusal + safe alternative
+  Session --> Shell : render denial
+end
+@enduml
+
+@startuml
+skinparam shadowing false
+title Personality OS - Deployment Interaction Sequence
+
+actor "User / Operator" as Operator
+
+box "Booted Host: x86_64 PC / QEMU VM"
+participant "Bootloader" as D_BL
+participant "Linux Kernel" as D_K
+participant "Initramfs" as D_IR
+control "PID1 Init Supervisor" as D_PID1
+participant "Persona Launcher" as D_PL
+participant "Personality Shell/TUI" as D_SH
+participant "Offline Persona Engine" as D_PE
+participant "System Adapters" as D_AD
+participant "Recovery Console" as D_RC
+end box
+
+box "Writable State Partition"
+participant "Session History DB/File" as D_SESS
+participant "Long-term Memory DB/File" as D_MEM
+participant "Runtime Settings" as D_SET
+participant "Logs" as D_LOG
+end box
+
+Operator -> D_BL : start boot entry
+D_BL -> D_K : load kernel image
+D_K -> D_IR : start early userspace
+D_IR -> D_PID1 : hand off control
+
+alt Normal or stateless runtime
+  D_PID1 -> D_PL : launch persona services
+  D_PL -> D_SH : initialize terminal experience
+  D_PL -> D_PE : start persona engine
+  D_PE -> D_SESS : load session history
+  D_PE -> D_MEM : load long-term memory
+  D_PE -> D_SET : load runtime settings
+  D_SH -> D_AD : invoke system integrations
+  D_AD -> D_LOG : append diagnostics
+else Recovery mode
+  D_PID1 -> D_RC : launch maintenance console
+  D_RC -> D_LOG : record recovery activity
+end
+
+note over D_PID1,D_PE
+Runtime binaries live on the root filesystem
+of the booted host.
+end note
+@enduml
+
+@startuml
+skinparam shadowing false
+title Personality OS - Layer Handoff Sequence
+
+box "Layer 1: Hardware / Virtual Hardware"
+participant "x86_64 PC" as L_PC
+participant "QEMU VM" as L_VM
+end box
+
+box "Layer 2: Boot and Kernel"
+participant "Bootloader" as L_BL
+participant "Linux Kernel" as L_K
+participant "Initramfs" as L_IR
+end box
+
+box "Layer 3: System Control Plane"
+control "PID1 Init Supervisor" as L_PID1
+participant "Recovery Path" as L_REC
+participant "Logging/Diagnostics" as L_LOG
+participant "Persistence Probe" as L_PROBE
+end box
+
+box "Layer 4: Personality Runtime"
+participant "Persona Launcher" as L_PL
+participant "Personality Shell/TUI" as L_SH
+participant "Session Manager" as L_SESSION
+participant "Command Router" as L_ROUTER
+participant "Safety Policy" as L_SAFETY
+participant "Offline Persona Engine" as L_PERSONA
+end box
+
+box "Layer 5: Data and Identity"
+participant "Built-in Persona Profile" as L_PROFILE
+participant "Behavior Rules" as L_RULES
+participant "Memory Store" as L_MEMORY
+participant "Settings Store" as L_SETTINGS
+end box
+
+alt Physical boot
+  L_PC -> L_BL : power-on handoff
+else Virtual boot
+  L_VM -> L_BL : virtual power-on handoff
+end
+L_BL -> L_K : load kernel
+L_K -> L_IR : start initramfs
+L_IR -> L_PID1 : start init supervisor
+L_PID1 -> L_PROBE : check persistence availability
+L_PROBE -> L_LOG : record boot diagnostics
+
+opt Recovery requested
+  L_PID1 -> L_REC : activate recovery path
+end
+
+L_PID1 -> L_PL : launch persona runtime
+L_PL -> L_SH : initialize shell
+L_SH -> L_SESSION : begin session
+L_SESSION -> L_ROUTER : submit parsed input
+L_ROUTER -> L_SAFETY : validate action
+L_ROUTER -> L_PERSONA : request persona response
+L_PERSONA -> L_PROFILE : load persona profile
+L_PERSONA -> L_RULES : load behavior rules
+L_PERSONA -> L_MEMORY : read/write memory
+L_PERSONA -> L_SETTINGS : load settings
+@enduml
