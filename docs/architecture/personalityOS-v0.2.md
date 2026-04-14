@@ -2,6 +2,8 @@
 
 This document summarizes the `v0.2` architecture for Personality OS. The detailed UML source lives in [personality-os-architecture-v0.2.puml](./personality-os-architecture-v0.2.puml).
 
+For the month-one org execution baseline built on this architecture, see [personalityOS-v0.3.md](./personalityOS-v0.3.md).
+
 ## Overview
 
 `v0.1` proved the boot-to-personality runtime shape. `v0.2` closes the kernel-integration gap by treating Personality OS as a Linux-based personality control plane rather than a persona application launched after boot.

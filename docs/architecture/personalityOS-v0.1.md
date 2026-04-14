@@ -2,7 +2,7 @@
 
 This document summarizes the `v0.1` architecture for Personality OS. The detailed UML source lives in [personality-os-architecture-v0.1.puml](./personality-os-architecture-v0.1.puml).
 
-For the kernel-integrated follow-on design, see [personalityOS-v0.2.md](./personalityOS-v0.2.md).
+For the kernel-integrated follow-on design, see [personalityOS-v0.2.md](./personalityOS-v0.2.md). For the month-one org execution baseline, see [personalityOS-v0.3.md](./personalityOS-v0.3.md).
 
 ## Overview
 

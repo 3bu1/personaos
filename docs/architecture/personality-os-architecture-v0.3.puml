@@ -1,0 +1,80 @@
+' Project: Personality OS
+' Artifact: Execution Draft
+' Version: v0.3
+
+@startuml
+skinparam shadowing false
+title Personality OS - Month One Delivery Organization
+
+rectangle "Founder / Product Ops" as Ops
+rectangle "OS / Boot Lead" as Boot
+rectangle "Runtime Lead" as Runtime
+rectangle "Policy / Systems Lead" as Policy
+
+rectangle "Week 1\nBoot Path" as W1
+rectangle "Week 2\nRuntime & Memory" as W2
+rectangle "Week 3\nPolicy & Events" as W3
+rectangle "Week 4\nHardening & Demo" as W4
+
+artifact "Bootable QEMU Image" as Image
+artifact "Scripted Demo Flow" as Demo
+artifact "Proof Artifacts" as Proof
+
+Ops --> Boot : acceptance gates\nand daily integration
+Ops --> Runtime : demo UX\nand operator flow
+Ops --> Policy : command surface\nand proof criteria
+
+Boot --> W1 : own
+Runtime --> W2 : own
+Policy --> W3 : own
+Ops --> W4 : drive integration
+
+W1 --> Image : initramfs,\nPID1, boot chain
+W2 --> Image : shell, identity,\nmemory basics
+W3 --> Image : event adapter,\npolicy broker, audit
+W4 --> Demo : repeatable demo
+W4 --> Proof : milestone evidence
+
+W1 --> W4 : foundation
+W2 --> W4 : integration input
+W3 --> W4 : integration input
+
+note bottom of Image
+Month-one POC outcome:
+- boot into personality-owned session
+- mediate bounded OS actions
+- preserve guarded or recovery path
+end note
+@enduml
+
+@startuml
+skinparam shadowing false
+title Personality OS - Month One Proof Gates
+
+start
+:Week 1\nBootable QEMU image;
+if (Boot path stable?) then (yes)
+  :Week 2\nPersonality owns first session;
+else (no)
+  stop
+endif
+
+if (Session ownership proven?) then (yes)
+  :Week 3\nBrokered actions + audit trail;
+else (no)
+  stop
+endif
+
+if (Bounded action mediation proven?) then (yes)
+  :Week 4\nFailure path + demo packaging;
+else (no)
+  stop
+endif
+
+if (Repeatable demo on fresh image?) then (yes)
+  :Month-one POC complete;
+else (no)
+  stop
+endif
+stop
+@enduml
