@@ -2,6 +2,8 @@
 
 This document summarizes the `v0.1` architecture for Personality OS. The detailed UML source lives in [personality-os-architecture-v0.1.puml](./personality-os-architecture-v0.1.puml).
 
+For the kernel-integrated follow-on design, see [personalityOS-v0.2.md](./personalityOS-v0.2.md).
+
 ## Overview
 
 Personality OS is a bootable `x86_64` Linux-based system that starts directly into a personality-driven terminal experience. The first milestone is a research demo that works offline, boots on QEMU and basic PC hardware, and feels like a personality-native OS rather than an app running on top of a conventional desktop.

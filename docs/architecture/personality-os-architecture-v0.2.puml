@@ -1,0 +1,194 @@
+' Project: Personality OS
+' Artifact: Architecture Draft
+' Version: v0.2
+
+@startuml
+skinparam shadowing false
+skinparam wrapWidth 220
+skinparam maxMessageSize 220
+
+title Personality OS Architecture - Kernel-Integrated Control Flow
+
+actor User
+
+box "Boot Chain"
+participant "Firmware\n(BIOS/UEFI)" as FW
+participant "Bootloader\n(GRUB/syslinux)" as BL
+participant "Linux Kernel" as K
+participant "Initramfs / Early Userspace" as IR
+end box
+
+box "Personality Kernel Interface"
+control "PID1 Personality Supervisor" as PID1
+participant "Personality Kernel Interface" as PKI
+participant "Kernel Event Adapter" as KEA
+participant "Kernel Policy Adapter" as KPA
+participant "Session Ownership Layer" as SOL
+end box
+
+box "System Control Plane"
+control "Policy Broker" as Broker
+control "Recovery Manager" as Recovery
+participant "Diagnostics / Audit" as Audit
+end box
+
+box "Personality Plane"
+participant "Identity Engine" as Identity
+participant "Interaction Engine" as Interaction
+participant "Governance & Empathy Engine" as Governance
+participant "Memory Engine" as Memory
+participant "Personality Shell / TUI" as Shell
+end box
+
+box "Storage"
+participant "Boot Memory" as BootMemory
+participant "Session Memory" as SessionMemory
+participant "Long-lived Memory" as LongMemory
+participant "Recovery Memory" as RecoveryMemory
+end box
+
+box "Kernel / Host Event Sources"
+participant "Process / Device / FS /\nNetwork / Power Events" as KernelEvents
+end box
+
+User -> FW : power on
+FW -> BL : transfer boot control
+BL -> K : load kernel + initramfs + cmdline
+K -> IR : start early userspace
+IR -> PID1 : hand off control
+
+PID1 -> PKI : initialize kernel contract
+PKI -> KEA : subscribe to kernel/system events
+PKI -> KPA : load baseline enforcement
+PID1 -> Recovery : inspect state and boot health
+Recovery -> BootMemory : load last known posture
+PID1 -> Audit : emit boot diagnostics
+
+alt Healthy boot
+  PID1 -> SOL : claim console and session ownership
+  SOL -> Shell : expose personality terminal
+  Shell -> Interaction : start interaction loop
+  Interaction -> Identity : load persona identity
+  Interaction -> Governance : resolve starting posture
+  Interaction -> Memory : hydrate working context
+  Memory -> SessionMemory : load current session state
+  Memory -> LongMemory : load continuity state
+  Governance -> Broker : publish initial policy
+  Broker -> KPA : enforce process/fs/power boundaries
+else Guarded, stateless, or recovery boot
+  PID1 -> Recovery : activate degraded posture
+  Recovery -> RecoveryMemory : load fault context
+  Recovery -> Broker : request restricted policy
+  Broker -> KPA : tighten allowed operations
+  Recovery -> Shell : launch guarded maintenance session
+end
+
+KernelEvents -> KEA : emit structured host signals
+KEA -> Broker : forward typed system events
+Broker -> Governance : request decision
+Governance --> Broker : allow / deny / escalate
+Broker -> KPA : apply bounded action
+Broker -> Audit : record decision and rationale
+
+note right of KPA
+Linux primitives used for enforcement:
+- capabilities
+- namespaces
+- cgroups
+- seccomp
+- LSM-friendly policy hooks
+end note
+
+note bottom of Recovery
+Boot postures:
+- conversational
+- guarded
+- stateless
+- recovery
+end note
+@enduml
+
+@startuml
+skinparam shadowing false
+title Personality OS - Boot and Policy Handoff
+
+actor User
+participant "Firmware" as FW2
+participant "Bootloader" as BL2
+participant "Linux Kernel" as K2
+participant "Initramfs" as IR2
+participant "PID1 Personality Supervisor" as PID2
+participant "Recovery Manager" as RM2
+participant "Personality Kernel Interface" as PKI2
+participant "Policy Broker" as Broker2
+participant "Session Ownership Layer" as SOL2
+participant "Personality Shell/TUI" as Shell2
+participant "Identity Engine" as Identity2
+participant "Governance & Empathy Engine" as Gov2
+participant "Memory Engine" as Memory2
+
+User -> FW2 : power on
+FW2 -> BL2 : load boot entry
+BL2 -> K2 : load kernel + initramfs
+K2 -> IR2 : start early userspace
+IR2 -> PID2 : hand off control
+
+PID2 -> RM2 : probe storage and boot state
+PID2 -> PKI2 : initialize kernel bridge
+PID2 -> Broker2 : load baseline policy
+
+alt Normal conversational boot
+  RM2 --> PID2 : healthy state
+  PID2 -> SOL2 : claim active session
+  SOL2 -> Shell2 : expose personality console
+  Shell2 -> Identity2 : load persona definition
+  Shell2 -> Gov2 : resolve initial posture
+  Shell2 -> Memory2 : load session and continuity memory
+  Gov2 -> Broker2 : refine runtime policy
+  Broker2 --> Shell2 : interaction allowed
+else Guarded or recovery boot
+  RM2 --> PID2 : degraded state
+  PID2 -> Broker2 : request restricted policy
+  Broker2 --> Shell2 : guarded session only
+end
+@enduml
+
+@startuml
+skinparam shadowing false
+title Personality OS - Runtime Event Mediation
+
+actor User
+participant "Personality Shell / TUI" as Shell3
+participant "Interaction Engine" as Interaction3
+participant "Policy Broker" as Broker3
+participant "Governance & Empathy Engine" as Gov3
+participant "Kernel Event Adapter" as KEA3
+participant "Kernel Policy Adapter" as KPA3
+participant "Memory Engine" as Memory3
+participant "Diagnostics / Audit" as Audit3
+
+User -> Shell3 : request status or action
+Shell3 -> Interaction3 : submit intent
+Interaction3 -> Broker3 : resolve requested operation
+Broker3 -> Gov3 : evaluate posture and constraints
+
+alt Allowed operation
+  Gov3 --> Broker3 : allow with bounds
+  Broker3 -> KPA3 : enforce and execute
+  KPA3 --> Broker3 : result
+  Broker3 -> Memory3 : append session effect
+  Broker3 -> Audit3 : record decision
+  Broker3 --> Interaction3 : structured result
+  Interaction3 --> Shell3 : render response
+else Denied or escalated
+  Gov3 --> Broker3 : deny or guarded escalation
+  Broker3 -> Audit3 : record denial
+  Broker3 --> Interaction3 : safe alternative
+  Interaction3 --> Shell3 : render refusal
+end
+
+KEA3 -> Broker3 : process/device/fs/network/power event
+Broker3 -> Gov3 : request adaptive policy update
+Gov3 --> Broker3 : posture change or no-op
+Broker3 -> Audit3 : record system-driven adjustment
+@enduml
