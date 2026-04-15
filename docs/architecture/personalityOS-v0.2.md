@@ -16,6 +16,7 @@ The design keeps Linux largely upstream-compatible, but moves personality into t
 - Keep a bounded and auditable command surface rather than exposing unrestricted shell access.
 - Translate kernel and system events into structured personality context.
 - Enforce process, filesystem, power, and memory actions through policy mediation.
+- Keep boot, recovery, and action authorization deterministic even when AI tooling is absent.
 - Preserve degraded and recovery behavior when memory, storage, or personality services fail.
 
 ## Core Architecture
@@ -50,6 +51,26 @@ The `Personality Plane` includes:
 
 This separation keeps kernel-facing enforcement and boot reliability distinct from higher-level behavior, while still allowing both planes to participate in the same control loop.
 
+For the first POC, AI is not embedded in either plane as a runtime dependency. Instead, `Codex CLI` sits outside the live OS as an operator-side intelligence tool that can inspect docs, summarize diagnostics, and help draft runbooks or policy changes without participating in boot or action authorization.
+
+## Operator Intelligence Boundary
+
+`Codex CLI` is treated as an external sidecar rather than a runtime model backend. Its responsibilities are limited to offline or operator-triggered assistance:
+
+- summarize diagnostics, logs, and failure states for operators
+- help draft runbooks, demo scripts, and documentation updates
+- propose policy or command-surface changes for human review
+- support implementation and debugging workflows during development
+
+`Codex CLI` must not:
+
+- gate boot or first-session ownership
+- directly authorize process, filesystem, power, or memory actions
+- bypass the `Policy Broker` or `Kernel Policy Adapter`
+- be required for guarded or recovery mode
+
+The live runtime therefore remains deterministic. User interaction flows through the shell, governance, memory, and broker layers even when no AI tooling is available.
+
 ## Boot and Control Flow
 
 On boot, `PID1 Personality Supervisor` probes the state store, reads boot memory, loads baseline policy, and initializes the `Personality Kernel Interface`.
@@ -67,6 +88,7 @@ In degraded or recovery conditions:
 - the recovery manager can lower the system into guarded mode or recovery mode
 - the kernel policy adapter tightens the allowed operation set
 - recovery memory and diagnostics remain readable even when full personality services are unavailable
+- `Codex CLI` remains optional operator tooling rather than part of the recovery path
 
 ## Kernel Integration Model
 
@@ -81,6 +103,14 @@ Kernel integration is implemented through these responsibilities:
 - `resolve_recovery_posture(failure_context)`: decide how much personality remains active during faults
 
 This gives Personality OS a kernel-adjacent control architecture without requiring a kernel fork as the default path.
+
+## Operator Tooling Interface
+
+Month one does not add a required runtime inference API. The only AI-facing contract is a non-critical operator tooling interface around `Codex CLI`, represented conceptually as:
+
+- `analyze_operator_context(input)`: consume docs, diagnostics, or operator notes and return guidance for humans
+
+Any future live inference adapter should be added only after the deterministic shell, broker, and recovery paths are proven. That later extension must remain outside the authority boundary enforced by `resolve_system_policy(context)` and `authorize_operation(subject, resource, action)`.
 
 ## Memory Model
 
@@ -113,5 +143,6 @@ If storage or memory services fail, the system should still boot into a guarded 
 - The first interactive session is personality-mediated through the session ownership layer.
 - Process, filesystem, and power actions flow through the policy broker before execution.
 - Kernel and device events can change posture or allowed behavior without bypassing safety.
+- `Codex CLI` availability does not affect boot, command mediation, or recovery behavior.
 - Degraded, stateless, and recovery modes remain available when state services fail.
 - The system remains usable even if the personality plane is partially unavailable.

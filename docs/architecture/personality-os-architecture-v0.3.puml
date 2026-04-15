@@ -20,9 +20,16 @@ artifact "Bootable QEMU Image" as Image
 artifact "Scripted Demo Flow" as Demo
 artifact "Proof Artifacts" as Proof
 
+package "Operator Tooling" {
+component "Codex CLI\nOperator Sidecar" as Codex
+artifact "Operator Runbooks\nand Diagnostics Summaries" as Runbooks
+}
+
 Ops --> Boot : acceptance gates\nand daily integration
 Ops --> Runtime : demo UX\nand operator flow
 Ops --> Policy : command surface\nand proof criteria
+Ops --> Codex : docs, runbooks,\nand diagnostics queries
+Policy --> Codex : diagnostics and\naudit context
 
 Boot --> W1 : own
 Runtime --> W2 : own
@@ -34,6 +41,8 @@ W2 --> Image : shell, identity,\nmemory basics
 W3 --> Image : event adapter,\npolicy broker, audit
 W4 --> Demo : repeatable demo
 W4 --> Proof : milestone evidence
+Codex --> Runbooks : operator guidance\nand doc drafts
+Runbooks --> W4 : demo support only
 
 W1 --> W4 : foundation
 W2 --> W4 : integration input
@@ -44,6 +53,13 @@ Month-one POC outcome:
 - boot into personality-owned session
 - mediate bounded OS actions
 - preserve guarded or recovery path
+end note
+
+note bottom of Codex
+External tooling only:
+- not required for boot
+- not in runtime authority path
+- analyze_operator_context(input)\nfor operators only
 end note
 @enduml
 
@@ -70,6 +86,11 @@ if (Bounded action mediation proven?) then (yes)
 else (no)
   stop
 endif
+
+note right
+Codex CLI may assist runbooks or diagnostics,
+but proof gates must pass without it.
+end note
 
 if (Repeatable demo on fresh image?) then (yes)
   :Month-one POC complete;

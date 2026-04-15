@@ -18,6 +18,7 @@ By the end of month one, the team should deliver:
 - mediated support for `help`, `status`, `safe_file_read`, `process_status`, `reboot`, and `shutdown`
 - at least one system-event path that changes posture or allowed behavior
 - a guarded, stateless, or recovery path that remains usable during faults
+- operator-facing docs or runbooks that can be assisted by `Codex CLI` outside the runtime path
 - a repeatable operator demo and milestone evidence
 
 ## Execution Baseline
@@ -26,6 +27,7 @@ By the end of month one, the team should deliver:
 - Use a minimal Linux image pipeline optimized for fast `x86_64` QEMU iteration.
 - Keep the implementation QEMU-first for the month; bare-metal is optional stretch work.
 - Keep kernel modules and kernel patching out of the critical path unless upstream interfaces prove insufficient.
+- Treat `Codex CLI` as operator-side tooling only; boot, session ownership, and brokered commands must work without it.
 - Treat `v0.2` interfaces as fixed month-one integration contracts:
   - `resolve_boot_mode(state, diagnostics)`
   - `observe_kernel_event(event)`
@@ -37,7 +39,7 @@ By the end of month one, the team should deliver:
 
 The month-one plan assumes a 3-4 builder founder team with four ownership lanes:
 
-- `Founder / Product Ops`: acceptance criteria, demo narrative, daily integration decisions, operator docs, and milestone proof
+- `Founder / Product Ops`: acceptance criteria, demo narrative, daily integration decisions, operator docs, `Codex CLI` workflows, and milestone proof
 - `OS / Boot Lead`: image build, initramfs, boot flow, `PID1 Personality Supervisor`, and guarded or recovery entry behavior
 - `Runtime Lead`: `Personality Shell/TUI`, identity loading, interaction loop, and session memory behavior
 - `Policy / Systems Lead`: `Kernel Event Adapter`, `Policy Broker`, bounded action mediation, diagnostics, and audit trail
@@ -50,20 +52,21 @@ The month-one plan assumes a 3-4 builder founder team with four ownership lanes:
 - `authorize_operation(subject, resource, action)`: `Policy / Systems Lead`
 - `append_session_memory(event)`: `Runtime Lead`
 - `resolve_recovery_posture(failure_context)`: `OS / Boot Lead` with `Policy / Systems Lead` review
+- `analyze_operator_context(input)`: `Founder / Product Ops` using `Codex CLI`, with `Policy / Systems Lead` input on diagnostics and audit data
 
 ## Month-One Workstreams
 
 - `Boot and Image Build`: minimal Linux image, QEMU boot path, session ownership, and normal, stateless, or recovery boot posture
 - `Runtime and Memory`: shell/TUI, identity load, session memory, and continuity behavior across reboot
 - `Policy and Event Mediation`: small typed event set, brokered action decisions, safe action execution, and audit logging
-- `Demo and Operator Flow`: scripted demo, runbooks, failure injection, and milestone evidence packaging
+- `Demo and Operator Flow`: scripted demo, runbooks, `Codex CLI`-assisted diagnostics summaries, failure injection, and milestone evidence packaging
 
 ## Weekly Delivery Plan
 
 - `Week 1`: bootable image, custom initramfs or PID1 handoff, console ownership path, and QEMU repeatability
 - `Week 2`: personality shell, identity load, first-session ownership, and memory basics
 - `Week 3`: mediated actions, event adapter, audit trail, and guarded-mode behavior
-- `Week 4`: failure-path validation, scripted demo, packaging, and milestone review
+- `Week 4`: failure-path validation, scripted demo, packaging, `Codex CLI`-assisted operator runbooks, and milestone review
 
 ## Milestones and Proof Gates
 
@@ -76,6 +79,7 @@ The month-one plan assumes a 3-4 builder founder team with four ownership lanes:
 
 - The demo can be repeated on a clean QEMU run without hand-fixed steps.
 - The system proves boot ownership, bounded action mediation, and degraded or recovery survivability.
+- `Codex CLI` can help operators interpret diagnostics, but the live demo does not require it to be available.
 - No unrestricted shell escape is required for the core demo flow.
 - The team can show clear ownership for boot, runtime, policy, and demo integration.
 
@@ -85,4 +89,5 @@ The month-one plan assumes a 3-4 builder founder team with four ownership lanes:
 - no default requirement for a custom kernel module
 - no graphical desktop shell
 - no broad bare-metal hardware support requirement
+- no live model-driven authorization or broker bypass
 - no production-grade autonomy, security, or multi-agent behavior

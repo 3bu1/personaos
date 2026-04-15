@@ -10,6 +10,7 @@ skinparam maxMessageSize 220
 title Personality OS Architecture - Kernel-Integrated Control Flow
 
 actor User
+actor "Operator / Builder" as Operator
 
 box "Boot Chain"
 participant "Firmware\n(BIOS/UEFI)" as FW
@@ -51,6 +52,10 @@ box "Kernel / Host Event Sources"
 participant "Process / Device / FS /\nNetwork / Power Events" as KernelEvents
 end box
 
+box "Operator Tooling Boundary"
+participant "Codex CLI\n(Operator Sidecar)" as Codex
+end box
+
 User -> FW : power on
 FW -> BL : transfer boot control
 BL -> K : load kernel + initramfs + cmdline
@@ -90,6 +95,10 @@ Governance --> Broker : allow / deny / escalate
 Broker -> KPA : apply bounded action
 Broker -> Audit : record decision and rationale
 
+Operator -> Codex : analyze_operator_context(input)\nusing docs, logs, or notes
+Codex -> Audit : read diagnostics snapshots
+Codex --> Operator : guidance, runbook steps,\nor policy draft for review
+
 note right of KPA
 Linux primitives used for enforcement:
 - capabilities
@@ -106,6 +115,15 @@ Boot postures:
 - stateless
 - recovery
 end note
+
+note right of Codex
+External operator tooling only:
+- not on boot path
+- no first-session dependency
+- no action authority
+- no broker bypass
+- not required for guarded/recovery
+end note
 @enduml
 
 @startuml
@@ -113,6 +131,7 @@ skinparam shadowing false
 title Personality OS - Boot and Policy Handoff
 
 actor User
+actor "Operator / Builder" as Operator2
 participant "Firmware" as FW2
 participant "Bootloader" as BL2
 participant "Linux Kernel" as K2
@@ -126,6 +145,7 @@ participant "Personality Shell/TUI" as Shell2
 participant "Identity Engine" as Identity2
 participant "Governance & Empathy Engine" as Gov2
 participant "Memory Engine" as Memory2
+participant "Codex CLI\n(Operator Sidecar)" as Codex2
 
 User -> FW2 : power on
 FW2 -> BL2 : load boot entry
@@ -151,6 +171,16 @@ else Guarded or recovery boot
   PID2 -> Broker2 : request restricted policy
   Broker2 --> Shell2 : guarded session only
 end
+
+Operator2 -> Codex2 : analyze_operator_context(input)
+Codex2 --> Operator2 : boot or recovery guidance
+
+note right of Codex2
+Optional operator tool.
+Boot succeeds without it.
+First session also works without it.
+Guarded or recovery mode does not depend on it.
+end note
 @enduml
 
 @startuml
@@ -158,6 +188,7 @@ skinparam shadowing false
 title Personality OS - Runtime Event Mediation
 
 actor User
+actor "Operator / Builder" as Operator3
 participant "Personality Shell / TUI" as Shell3
 participant "Interaction Engine" as Interaction3
 participant "Policy Broker" as Broker3
@@ -166,6 +197,7 @@ participant "Kernel Event Adapter" as KEA3
 participant "Kernel Policy Adapter" as KPA3
 participant "Memory Engine" as Memory3
 participant "Diagnostics / Audit" as Audit3
+participant "Codex CLI\n(Operator Sidecar)" as Codex3
 
 User -> Shell3 : request status or action
 Shell3 -> Interaction3 : submit intent
@@ -191,4 +223,14 @@ KEA3 -> Broker3 : process/device/fs/network/power event
 Broker3 -> Gov3 : request adaptive policy update
 Gov3 --> Broker3 : posture change or no-op
 Broker3 -> Audit3 : record system-driven adjustment
+
+Operator3 -> Codex3 : analyze_operator_context(input)
+Codex3 -> Audit3 : read audit snapshot
+Codex3 --> Operator3 : suggested explanation,\nrunbook step, or policy draft
+
+note right of Broker3
+Broker is final authority.
+All live actions remain brokered.
+Codex CLI never executes requests.
+end note
 @enduml
