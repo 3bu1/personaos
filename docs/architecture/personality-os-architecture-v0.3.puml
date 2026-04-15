@@ -19,11 +19,8 @@ rectangle "Week 4\nHardening & Demo" as W4
 artifact "Bootable QEMU Image" as Image
 artifact "Scripted Demo Flow" as Demo
 artifact "Proof Artifacts" as Proof
-
-package "Operator Tooling" {
-component "Codex CLI\nOperator Sidecar" as Codex
-artifact "Operator Runbooks\nand Diagnostics Summaries" as Runbooks
-}
+rectangle "Codex CLI\nOperator Sidecar" as Codex
+rectangle "Operator Runbooks\nand Diagnostics Summaries" as Runbooks
 
 Ops --> Boot : acceptance gates\nand daily integration
 Ops --> Runtime : demo UX\nand operator flow
@@ -87,10 +84,7 @@ else (no)
   stop
 endif
 
-note right
-Codex CLI may assist runbooks or diagnostics,
-but proof gates must pass without it.
-end note
+:Codex CLI may assist runbooks or diagnostics,\nbut proof gates must pass without it.;
 
 if (Repeatable demo on fresh image?) then (yes)
   :Month-one POC complete;
